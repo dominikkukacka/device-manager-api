@@ -2,6 +2,7 @@ var http = require('http');
 var express = require('express');
 var bodyParser = require('body-parser');
 var multer = require('multer');
+var exec = require('child_process').exec;
 
 var app = express();
 
@@ -15,9 +16,9 @@ app.get('/', function(req, res) {
 });
 
 app.get('/devices', function(req, res) {
-  var exec = require('child_process').exec;
 
-  child = exec('adb devices', function (error, stdout, stderr) {
+
+  exec('adb devices', function (error, stdout, stderr) {
     if (error !== null) {
       console.log('exec error: ' + error);
       res.send(error);
@@ -35,6 +36,35 @@ app.get('/devices', function(req, res) {
 
     res.send(lines);
   });
+
+});
+
+app.post('/devices/:deviceId/install', function(req, res) {
+
+  var file = req.files.file.path;
+  var deviceId = req.params.deviceId;
+
+  if(file.substring(file.length-3) === 'apk') {
+    exec('adb -s ' + deviceId + ' install -r ' + file, function (error, stdout, stderr) {
+      if (error !== null) {
+        console.log('exec error: ' + error);
+        res.status(500).send(error);
+      }
+
+      res.send(stdout);
+    });
+  } else if(file.substring(file.length-3) === 'ipa') {
+    exec('ideviceinstaller -i ' + deviceId + ' -g ' + file, function (error, stdout, stderr) {
+      if (error !== null) {
+        console.log('exec error: ' + error);
+        res.status(500).send(error);
+      }
+
+      res.send(stdout);
+    });
+  } else {
+    res.send('wtf');
+  }
 
 });
 
